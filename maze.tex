@@ -1,0 +1,33 @@
+\documentclass{ltxdoc}
+\title{The \textsf{maze} package\footnote{~~This project is distributed under the \LaTeX~Project Public License, version 1.3c.}}
+\usepackage{graphicx}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\usepackage[misc]{ifsym}
+\author{Sicheng Du\thanks{~~\Letter~~\href{mailto:siddsc@foxmail.com}{siddsc@foxmail.com}}}
+\date{\today~~~~v1.1}
+\usepackage[colorlinks,linkcolor=purple]{hyperref}
+\usepackage{maze}
+\begin{document}
+\maketitle
+The \textsf{maze} package can generate random square mazes of a specified size. You need to start from the bottom-left corner and reach the top-right corner to play it.
+\begin{macro}{\maze}
+\marg{size}\oarg{seed} is the syntax of the command that generates a maze. Thereinto
+\begin{description}
+\item[\marg{size}] controls the density of the walls inside the maze and directly influences its complexity. It must be a positive integer greater or equal to 2.
+
+To have the package produce a satisfactory outcome, it is recommended to input a number between 20 and 30 into \marg{text}. Over large numbers may cause \TeX~to exhaust its capacity and fail to produce anything.
+\item[\oarg{seed}] is an optional parameter that specifies the seed for random numbers. If it is omitted, the current time (minute) will be used as the seed instead.
+\end{description}\end{macro}
+
+As an example, the following can be created by \cs{maze{30}[4]} and \cs{maze{20}[6]} respectively.
+\begin{figure}[h]
+\begin{minipage}{.5\textwidth}
+\maze{30}[4]
+\end{minipage}\hfill
+\begin{minipage}{.5\textwidth}
+\maze{20}[6]
+\end{minipage}
+\end{figure}
+\eject
+\end{document}
