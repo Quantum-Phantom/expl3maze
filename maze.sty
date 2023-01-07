@@ -1,0 +1,87 @@
+% Copyright (C) 2022 by Sicheng Du <siddsc@foxmail.com>
+% This project is distributed under the LaTeX Project Public License, version 1.3c.
+%-------------------------%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{maze}[1.1]
+\ExplSyntaxOn
+\int_new:N\l_rand
+\int_new:N\l_old \int_new:N\l_new
+\dim_const:Nn\g_size{\linewidth}
+\newcommand{\m@ze}[2]{
+  \sys_gset_rand_seed:n{#2}
+  \let\g_map\undefined
+  \let\g_walls_v\undefined\let\g_walls_h\undefined
+  \intarray_new:Nn\g_map{#1*#1}
+  \intarray_new:Nn\g_walls_v{#1*(#1-1)}
+  \intarray_new:Nn\g_walls_h{#1*(#1-1)}
+  \int_step_inline:nn{#1*#1}{
+    \intarray_gset:Nnn\g_map{##1}{##1}
+  }
+  \int_step_inline:nn{#1*(#1-1)}{
+    \intarray_gset:Nnn\g_walls_v{##1}{1}
+    \intarray_gset:Nnn\g_walls_h{##1}{1}
+  }
+  \bool_do_until:nn{
+    \int_compare_p:nNn{\intarray_item:Nn\g_map{1}}
+    ={\intarray_item:Nn\g_map{#1*#1}}
+  }{
+    \int_set:Nn\l_rand{\int_rand:n{#1*(#1-1)}}
+    \int_compare:nNnTF{0}={\intarray_item:Nn\g_walls_v{\l_rand}}{}{
+      \int_compare:nNnTF{
+        \intarray_item:Nn\g_map{\l_rand+\int_div_truncate:nn{\l_rand-1}{#1-1}}
+      }={
+        \intarray_item:Nn\g_map{
+          1+\l_rand+\int_div_truncate:nn{\l_rand-1}{#1-1}
+        }
+        }{}{
+        \int_set:Nn\l_new{
+          \intarray_item:Nn\g_map{1+\l_rand+\int_div_truncate:nn{\l_rand-1}{#1-1}}
+        }
+        \int_set:Nn\l_old{
+          \intarray_item:Nn\g_map{\l_rand+\int_div_truncate:nn{\l_rand-1}{#1-1}}
+        }
+        \intarray_gset:Nnn\g_walls_v{\l_rand}{0}
+        \int_step_inline:nn{#1*#1}{
+          \int_compare:nNnTF{\l_old}={\intarray_item:Nn\g_map{##1}}
+          {\intarray_gset:Nnn\g_map{##1}{\l_new}}{}
+        }
+      }
+    }
+    \int_set:Nn\l_rand{\int_rand:n{#1*(#1-1)}}
+    \int_compare:nNnTF{0}={\intarray_item:Nn\g_walls_h{\l_rand}}{}{
+      \int_compare:nNnTF{\intarray_item:Nn\g_map{\l_rand}}
+      ={\intarray_item:Nn\g_map{#1+\l_rand}}{}{
+        \int_set:Nn\l_new{\intarray_item:Nn\g_map{#1+\l_rand}}
+        \int_set:Nn\l_old{\intarray_item:Nn\g_map{\l_rand}}
+        \intarray_gset:Nnn\g_walls_h{\l_rand}{0}
+        \int_step_inline:nn{#1*#1}{
+          \int_compare:nNnTF{\l_old}={\intarray_item:Nn\g_map{##1}}
+          {\intarray_gset:Nnn\g_map{##1}{\l_new}}{}
+        }
+      }
+    }
+  }
+}
+\NewDocumentCommand\maze{mO{\c_sys_minute_int}}{
+  \m@ze{#1}{#2}
+  \setlength{\unitlength}{\fp_eval:n{.4/#1}\g_size}
+  \begin{picture}(\int_eval:n{#1+2},\int_eval:n{#1+2})(-1,-1)
+  \put(0,0){\line(0,1){#1}}\put(0,0){\line(1,0){#1}}
+  \put(#1,#1){\line(0,-1){#1}}\put(#1,#1){\line(-1,0){#1}}
+  \int_step_inline:nn{#1*(#1-1)}{
+    \int_compare:nNnTF{0}={\intarray_item:Nn\g_walls_h{##1}}{}{
+      \put(
+        \int_mod:nn{##1-1}{#1},
+        \int_eval:n{1+\int_div_truncate:nn{##1-1}{#1}}
+      ){\line(1,0){1}}
+    }
+    \int_compare:nNnTF{0}={\intarray_item:Nn\g_walls_v{##1}}{}{
+      \put(
+        \int_mod:nn{##1}{#1-1},
+        \int_div_truncate:nn{##1-1}{#1-1}
+      ){\line(0,1){1}}
+    }
+  }
+  \end{picture}
+}
+\ExplSyntaxOff
