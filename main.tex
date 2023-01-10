@@ -1,0 +1,160 @@
+\documentclass{ltxdoc}
+\title{The \textsf{maze} package\footnote{~~This project is distributed under the \LaTeX~Project Public License, version 1.3c.}}
+\usepackage[margin=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{listings}
+\lstset{
+    basicstyle=\fontspec{Consolas},numbers=left,
+    numberstyle=\small,stepnumber=1,numbersep=5pt
+}
+\usepackage{xcolor}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\usepackage{indentfirst}
+\usepackage[misc]{ifsym}
+\author{Sicheng Du\thanks{~~\Letter~~\href{mailto:siddsc@foxmail.com}{siddsc@foxmail.com}}}
+\date{\today~~~~v1.2}
+\usepackage[colorlinks,linkcolor=purple]{hyperref}
+\usepackage{maze}
+\begin{document}
+\maketitle
+\section{Changes in this version}
+Thanks to the \TeX nicians who kindly gave valuable and earnest suggestions to this package, the version 1.2 is now released. The main changes include
+\begin{enumerate}
+\item Corrected some mistakes in this manual;
+\item Modified the format in the source code to improve compatibility;
+\item Improved the output map of the maze to make it clearer.
+\end{enumerate}
+\section{User instructions}
+The \textsf{maze} package can generate random square mazes of a specified size. You need to start from the bottom-left corner and reach the top-right corner to play it.
+\begin{macro}{\maze}
+\marg{size}\oarg{seed} is the syntax of the command that generates a maze. Thereinto
+\begin{description}
+\item[\marg{size}] controls the density of the walls inside the maze and directly influences its complexity. It must be a positive integer in the range \textbf{[2,100]}.
+
+To have the package produce a satisfactory output, it is recommended to input a number between 20 and 50 into \marg{text}. Over large numbers may cause \TeX~to exhaust its capacity and fail to produce anything.
+\item[\oarg{seed}] is an optional parameter that specifies the seed for random numbers. If it is omitted, the current time (minute) will be used as the seed instead.
+\end{description}\end{macro}
+
+As an example, the mazes in Figure \ref{fig:mazes} can be created by \cs{maze\{30\}[4]}, \cs{maze\{20\}[7]} and \cs{maze\{25\}}\footnote{This maze is likely to look different because of the difference of compiling time.} respectively.
+\begin{figure}[h]
+\centering
+\maze{30}[4]\hfill\maze{20}[7]\hfill\maze{25}
+\caption{Examples of mazes}\label{fig:mazes}
+\end{figure}
+\clearpage
+\section{Code implementation}
+This package uses the \textsf{expl3} programming layer. Under the scope of \cs{ExplSyntaxOn} we first define some variables
+\begin{lstlisting}[firstnumber=7]
+\int_new:N\l_maze_rand_int                           % the random variable
+\int_new:N\l_maze_old_int \int_new:N\l_maze_new_int
+\dim_const:Nn\g_maze_size_dim{\linewidth}            % store the line width
+\intarray_new:Nn\g_maze_map_intarray{10000}          % map of the maze
+\intarray_new:Nn\g_walls_v_intarray{9900}            % existence of vertical
+\intarray_new:Nn\g_walls_h_intarray{9900}            % /horizontal walls
+\end{lstlisting}
+
+The internal command is defined as \cs{m@ze}. Starting with variable initialization,
+\begin{lstlisting}[firstnumber=last]
+\newcommand{\m@ze}[2]{
+  \sys_gset_rand_seed:n{#2}
+  \intarray_gzero:N\g_maze_map_intarray
+  \intarray_gzero:N\g_walls_v_intarray
+  \intarray_gzero:N\g_walls_h_intarray
+  \int_step_inline:nn{#1*#1}{
+    \intarray_gset:Nnn\g_maze_map_intarray{##1}{##1}
+  }
+  \int_step_inline:nn{#1*(#1-1)}{
+    \intarray_gset:Nnn\g_walls_v_intarray{##1}{1}
+    \intarray_gset:Nnn\g_walls_h_intarray{##1}{1}
+  }
+\end{lstlisting}
+
+Then we apply the \textit{Kruskal} algorithm to the intarray-based variant of the \textit{Union-find set}. Our loop should end when the beginning and finishing cells are connected. (so that a path exists)
+\begin{lstlisting}[firstnumber=last]
+  \bool_do_until:nn{
+    \int_compare_p:nNn{\intarray_item:Nn\g_maze_map_intarray{1}}
+    ={\intarray_item:Nn\g_maze_map_intarray{#1*#1}}
+  }{
+    \int_set:Nn\l_maze_rand_int{\int_rand:n{#1*(#1-1)}}
+    \int_compare:nNnTF{0}={\intarray_item:Nn\g_walls_v_intarray{\l_maze_rand_int}}{}{
+      \int_compare:nNnTF{
+        \intarray_item:Nn\g_maze_map_intarray{
+          \l_maze_rand_int+\int_div_truncate:nn{\l_maze_rand_int-1}{#1-1}
+        }
+      }={
+        \intarray_item:Nn\g_maze_map_intarray{
+          1+\l_maze_rand_int+\int_div_truncate:nn{\l_maze_rand_int-1}{#1-1}
+        }
+        }{}{
+        \int_set:Nn\l_maze_new_int{
+          \intarray_item:Nn\g_maze_map_intarray{
+            1+\l_maze_rand_int+\int_div_truncate:nn{\l_maze_rand_int-1}{#1-1}
+          }
+        }
+        \int_set:Nn\l_maze_old_int{
+          \intarray_item:Nn\g_maze_map_intarray{
+            \l_maze_rand_int+\int_div_truncate:nn{\l_maze_rand_int-1}{#1-1}
+          }
+        }
+        \intarray_gset:Nnn\g_walls_v_intarray{\l_maze_rand_int}{0}
+        \int_step_inline:nn{#1*#1}{
+          \int_compare:nNnTF{\l_maze_old_int}={\intarray_item:Nn\g_maze_map_intarray{##1}}
+          {\intarray_gset:Nnn\g_maze_map_intarray{##1}{\l_maze_new_int}}{}
+        }
+      }
+    }
+    \int_set:Nn\l_maze_rand_int{\int_rand:n{#1*(#1-1)}}
+    \int_compare:nNnTF{0}={\intarray_item:Nn\g_walls_h_intarray{\l_maze_rand_int}}{}{
+      \int_compare:nNnTF{\intarray_item:Nn\g_maze_map_intarray{\l_maze_rand_int}}
+      ={\intarray_item:Nn\g_maze_map_intarray{#1+\l_maze_rand_int}}{}{
+        \int_set:Nn\l_maze_new_int{
+          \intarray_item:Nn\g_maze_map_intarray{#1+\l_maze_rand_int}
+        }
+        \int_set:Nn\l_maze_old_int{
+          \intarray_item:Nn\g_maze_map_intarray{\l_maze_rand_int}
+        }
+        \intarray_gset:Nnn\g_walls_h_intarray{\l_maze_rand_int}{0}
+        \int_step_inline:nn{#1*#1}{
+          \int_compare:nNnTF{\l_maze_old_int}={\intarray_item:Nn\g_maze_map_intarray{##1}}
+          {\intarray_gset:Nnn\g_maze_map_intarray{##1}{\l_maze_new_int}}{}
+        }
+      }
+    }
+  }
+}
+\end{lstlisting}
+
+Lastly, we finish off by defining the user command, which outputs a map of the maze. To set the size and draw the boundaries,
+\begin{lstlisting}[firstnumber=last]
+\NewDocumentCommand\maze{mO{\c_sys_minute_int}}{
+  \m@ze{#1}{#2}
+  \setlength{\unitlength}{\fp_eval:n{.4/#1}\g_maze_size_dim}
+  \begin{picture}(#1,#1)(0,0)
+  \put(0,0){\line(0,1){#1}} \put(#1,#1){\line(0,-1){#1}}
+  \put(\int_eval:n{#1-1},#1){\line(-1,0){\int_eval:n{#1-1}}}
+  \put(1,0){\line(1,0){\int_eval:n{#1-1}}}
+\end{lstlisting}
+
+We extract from \cs{g\_walls\_h\_intarray} and \cs{g\_walls\_v\_intarray} and draw a line wherever a wall exists.
+\begin{lstlisting}[firstnumber=last]
+  \int_step_inline:nn{#1*(#1-1)}{
+    \int_compare:nNnTF{0}={\intarray_item:Nn\g_walls_h_intarray{##1}}{}{
+      \put(
+        \int_mod:nn{##1-1}{#1},
+        \int_eval:n{1+\int_div_truncate:nn{##1-1}{#1}}
+      ){\line(1,0){1}}
+    }
+    \int_compare:nNnTF{0}={\intarray_item:Nn\g_walls_v_intarray{##1}}{}{
+      \put(
+        \int_mod:nn{##1}{#1-1},
+        \int_div_truncate:nn{##1-1}{#1-1}
+      ){\line(0,1){1}}
+    }
+  }
+  \end{picture}
+}
+\ExplSyntaxOff
+% End of package code
+\end{lstlisting}
+\end{document}
