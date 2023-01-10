@@ -14,7 +14,7 @@ You can read the package manual for some explanations.
 Copyright and License
 ---------------------
 
-    Copyright (C) 2022 by Sicheng Du <siddsc@foxmail.com>
+    Copyright (C) 2023 by Sicheng Du <siddsc@foxmail.com>
     -----------------------------------------------------------------
 
     This work may be distributed and/or modified under the
